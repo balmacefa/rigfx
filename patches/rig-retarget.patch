@@ -1,0 +1,191 @@
+diff --git a/src/core/rig.js b/src/core/rig.js
+index 525b714..282a750 100644
+--- a/src/core/rig.js
++++ b/src/core/rig.js
+@@ -13,9 +13,15 @@ import { hex } from "./color.js";
+ import { DUMMY_PAL } from "./actor.js";
+ 
+ const PAL = Object.fromEntries(Object.entries(DUMMY_PAL).map(([k, v]) => [k, hex(v) >>> 0]));
+-const INK = PAL.k, SEAM = PAL.J, MARK = PAL.m;
++let INK = PAL.k, SEAM = PAL.J, MARK = PAL.m;
+ // plates and joints: lit to dark
+-const SHELL = [PAL.A, PAL.B, PAL.C, PAL.D], CORE = [PAL.E, PAL.F, PAL.G, PAL.G];
++let SHELL = [PAL.A, PAL.B, PAL.C, PAL.D], CORE = [PAL.E, PAL.F, PAL.G, PAL.G];
++// custom actor palette override (q&d): pass {shell:[4],core:[4],ink,seam,mark} of hex strings; null resets.
++// Stored on globalThis so it crosses ESM module-instance boundaries (fxlib may hold a separate rig instance).
++export function setActorPalette(p) {
++  const h = (v) => hex(v) >>> 0;
++  globalThis.__PFX_ACTOR_PAL = p ? { shell: p.shell.map(h), core: p.core.map(h), ink: h(p.ink), seam: h(p.seam), mark: h(p.mark ?? "#f53cd1") } : null;
++}
+ const DEG = Math.PI / 180, W0 = 24, H0 = 38;
+ 
+ // ---- vectors and turns
+@@ -34,10 +40,45 @@ const tv = (M, v) => [M[0] * v[0] + M[3] * v[1] + M[6] * v[2], M[1] * v[0] + M[4
+ const clamp01 = (v) => Math.max(0, Math.min(1, v));
+ 
+ // ---- the body's measurements, in pixels
+-const M = {
++const M0 = {
+   pelvis: 19.7, spine1: 2.8, spine2: 4.6, shoulderUp: 2.5, shoulderOut: 5.9, neckUp: 4.0, headUp: 3.1,
+   hipDown: 1.1, hipOut: 2.8, thigh: 8.6, shin: 8.3, upper: 7.6, fore: 7.4, turn: 36 * DEG,
+ };
++let M = { ...M0 };
++let RS = 1; // radius scale for whatever is being drawn
++const K = { thick: 1, head: 1 };
++const REST_BY_BODY = new Map();
++const BASE_SH = { x: 0, y: M0.pelvis + M0.spine1 + M0.spine2 + M0.shoulderUp };
++/**
++ * Body profile (q&d retarget): any subset of { legS, torsoS, armS, headS, neckS, widthS, thick }, all multipliers of the stock body.
++ * Poses stay the same; posed() re-aims hands and feet to the new limb lengths so one animation fits every body.
++ */
++export function setBody(b) { globalThis.__PFX_BODY = b || null; }
++function bodyKey(b) { return b ? JSON.stringify(b) : ""; }
++function applyBody(b) {
++  const o = b || {}, legS = o.legS ?? 1, torsoS = o.torsoS ?? 1, armS = o.armS ?? 1, neckS = o.neckS ?? 1, headS = o.headS ?? 1, widthS = o.widthS ?? 1;
++  M = { ...M0, pelvis: M0.pelvis * legS, hipDown: M0.hipDown * legS, thigh: M0.thigh * legS, shin: M0.shin * legS,
++    spine1: M0.spine1 * torsoS, spine2: M0.spine2 * torsoS, shoulderUp: M0.shoulderUp * torsoS, neckUp: M0.neckUp * neckS * headS, headUp: M0.headUp * headS,
++    upper: M0.upper * armS, fore: M0.fore * armS, hipOut: M0.hipOut * widthS, shoulderOut: M0.shoulderOut * widthS };
++  K.thick = o.thick ?? 1; K.head = headS;
++}
++// re-aim hands and feet (pose coordinates) to the current body
++function retarget(q) {
++  const b = globalThis.__PFX_BODY;
++  if (!b) return q;
++  const legS = b.legS ?? 1, armS = b.armS ?? 1, o = { ...q };
++  const shY = M.pelvis + M.spine1 + M.spine2 + M.shoulderUp;
++  for (const [x, y] of [["fx", "fy"], ["bx", "by"]]) {
++    o[x] = BASE_SH.x + (q[x] - BASE_SH.x) * armS;
++    o[y] = -(shY + (-q[y] - BASE_SH.y) * armS);
++  }
++  for (const [x, y] of [["ffx", "ffy"], ["fbx", "fby"]]) {
++    o[x] = q[x] * legS;
++    o[y] = -((-q[y] - 1.8) * legS + 1.8);
++  }
++  o.crouch = (q.crouch ?? 0) * legS;
++  return o;
++}
+ /** Standing easy, in screen terms: hands and feet are where they should end up, y negative is up. */
+ export const STAND = { lean: 0, crouch: 0, yaw: 0, fx: -3, fy: -15, bx: 5, by: -15, ffx: -2, ffy: -4, fbx: 3, fby: -4 };
+ 
+@@ -157,6 +198,7 @@ function plot(i, z, tone, part, mat, wx, wy, color) {
+   Col[i] = color;
+ }
+ function sphere(c, r, part, mat) {
++  r *= RS;
+   const x0 = Math.floor(c[0] - r), x1 = Math.ceil(c[0] + r), y0 = Math.floor(c[1] - r), y1 = Math.ceil(c[1] + r);
+   for (let wy = y0; wy <= y1; wy++)
+     for (let wx = x0; wx <= x1; wx++) {
+@@ -167,14 +209,18 @@ function sphere(c, r, part, mat) {
+     }
+ }
+ function sweep(a, b, ra, rb, part, mat, bulge = 0) {
++  ra *= RS; rb *= RS; bulge *= RS;
++  const _rs = RS; RS = 1;
+   const n = Math.max(2, Math.ceil(len(sub(b, a)) / 0.4));
+   for (let k = 0; k <= n; k++) {
+     const u = k / n;
+     sphere(add(a, mul(sub(b, a), u)), ra + (rb - ra) * u + bulge * Math.sin(u * Math.PI), part, mat);
+   }
++  RS = _rs;
+ }
+ // an ellipsoid with radii r along the axes of frame R, seen along z
+ function ellipsoid(c, R, r, part, mat) {
++  r = [r[0] * RS, r[1] * RS, r[2] * RS];
+   const big = Math.max(r[0], r[1], r[2]), x0 = Math.floor(c[0] - big), x1 = Math.ceil(c[0] + big), y0 = Math.floor(c[1] - big), y1 = Math.ceil(c[1] + big);
+   const Rt = [R[0], R[3], R[6], R[1], R[4], R[7], R[2], R[5], R[8]], D = [1 / (r[0] * r[0]), 1 / (r[1] * r[1]), 1 / (r[2] * r[2])];
+   // A = R diag(D) R^T
+@@ -198,6 +244,7 @@ const useFrame = (name) => { curFrameIndex = FRAME_IDS.indexOf(name); };
+ 
+ function drawBody(S) {
+   const { B, armN, armF, legN, legF, sN, sF, hipN, hipF, turn } = S, F_ = (name) => B[name];
++  RS = K.thick;
+   useFrame("pelvis");
+   ellipsoid(add(F_("pelvis").t, mv(F_("pelvis").R, [0, -0.2, 0])), F_("pelvis").R, [2.9, 2.6, 4.2], PART.pelvis, 0);
+   useFrame("waist");
+@@ -207,8 +254,10 @@ function drawBody(S) {
+   useFrame("neck");
+   sweep(F_("neck").t, add(F_("neck").t, mv(F_("head").R, [0, 1.6, 0])), 1.25, 1.15, PART.neck, 1);
+   useFrame("head");
++  RS = K.head;
+   ellipsoid(F_("head").t, F_("head").R, [3, 3.3, 2.8], PART.head, 0);
+   ellipsoid(add(F_("head").t, mv(F_("head").R, [0.85, -0.45, 0])), F_("head").R, [2.4, 2.7, 2.35], PART.face, 0);
++  RS = K.thick;
+   const arm = (far, A, sh, up, el, fo, ha, nameU, nameF) => {
+     curDim = far ? 1 : 0;
+     useFrame(nameU);
+@@ -234,6 +283,7 @@ function drawBody(S) {
+   };
+   leg(false, legN, hipN, PART.thighN, PART.kneeN, PART.shinN, PART.footN, "thighN", "shinN", "footN");
+   leg(true, legF, hipF, PART.thighF, PART.kneeF, PART.shinF, PART.footF, "thighF", "shinF", "footF");
++  RS = 1;
+   void turn;
+ }
+ 
+@@ -353,6 +403,9 @@ export const WEAPONS = {
+ 
+ // ---- flat tones, seams, and one clean ink line
+ function finish(S, restFrames) {
++  const _P = globalThis.__PFX_ACTOR_PAL;
++  if (_P) { SHELL = _P.shell; CORE = _P.core; INK = _P.ink; SEAM = _P.seam; MARK = _P.mark; }
++  else { SHELL = [PAL.A, PAL.B, PAL.C, PAL.D]; CORE = [PAL.E, PAL.F, PAL.G, PAL.G]; INK = PAL.k; SEAM = PAL.J; MARK = PAL.m; }
+   const dim = (part) => part >= PART.upperF && part <= PART.handF ? 1 : part >= PART.thighF && part <= PART.footF ? 1 : 0;
+   const toneOf = (v, part) => {
+     let t = v > 0.8 ? 0 : v > 0.42 ? 1 : v > 0.08 ? 2 : 3;
+@@ -437,7 +490,7 @@ const turnAll = (S, a) => {
+ };
+ let REST_FRAMES = null;
+ function render(pose) {
+-  const S = solve(pose), q = S.q, whole = (q.yaw ?? 0) + (q.face === -1 ? Math.PI : 0);
++  const S = solve(retarget({ ...STAND, ...pose })), q = S.q, whole = (q.yaw ?? 0) + (q.face === -1 ? Math.PI : 0);
+   if (whole) turnAll(S, whole);
+   const air = (q.y ?? 0) < -0.5;
+   clipBody = !air;
+@@ -455,6 +508,14 @@ function render(pose) {
+   return finish(S, REST_FRAMES);
+ }
+ REST_FRAMES = solve({}).B;
++REST_BY_BODY.set("", REST_FRAMES);
++function enterBody() {
++  const b = globalThis.__PFX_BODY || null, k = bodyKey(b);
++  applyBody(b);
++  if (!REST_BY_BODY.has(k)) REST_BY_BODY.set(k, solve({}).B);
++  REST_FRAMES = REST_BY_BODY.get(k);
++  return k;
++}
+ 
+ const CACHE = new Map();
+ const keyOf = (p) => {
+@@ -468,12 +529,13 @@ const keyOf = (p) => {
+ };
+ /** How far short of where the pose wants them the hands fall, in px: arms don't stretch. */
+ export function shortfall(pose) {
+-  const S = solve(pose), q = S.q, near = len(sub(S.armN.end, [q.fx, -q.fy, S.armN.end[2]])), far = q.two ? 0 : len(sub(S.armF.end, [q.bx, -q.by, S.armF.end[2]]));
++  enterBody();
++  const S = solve(retarget({ ...STAND, ...pose })), q = S.q, near = len(sub(S.armN.end, [q.fx, -q.fy, S.armN.end[2]])), far = q.two ? 0 : len(sub(S.armF.end, [q.bx, -q.by, S.armF.end[2]]));
+   return Math.max(near, far);
+ }
+ /** The pixels of a pose: { n, xs, ys, color, src, ink, x0, y0, x1, y1 }, in local space with the feet at (0, 0). */
+ export function posed(pose) {
+-  const key = keyOf(pose);
++  const key = enterBody() + "|" + keyOf(pose);
+   let r = CACHE.get(key);
+   if (!r) {
+     if (CACHE.size > 6000) CACHE.clear();
+@@ -488,7 +550,8 @@ export function posed(pose) {
+  * are what a pose moves (hands and feet); everything else is solved from them.
+  */
+ export function skeleton(pose) {
+-  const S = solve(pose), q = S.q, whole = (q.yaw ?? 0) + (q.face === -1 ? Math.PI : 0);
++  enterBody();
++  const S = solve(retarget({ ...STAND, ...pose })), q = S.q, whole = (q.yaw ?? 0) + (q.face === -1 ? Math.PI : 0);
+   if (whole) turnAll(S, whole);
+   const { B, armN, armF, legN, legF, sN, sF, hipN, hipF } = S, at = (f, v) => add(f.t, mv(f.R, v));
+   const J = {
+@@ -502,6 +565,7 @@ export function skeleton(pose) {
+ }
+ /** The figure taken apart: each part drawn alone, with its own outline, and where its middle is. For exploded views. */
+ export function posedParts(pose) {
++  enterBody();
+   const out = [];
+   for (const [name, part] of Object.entries(PART)) {
+     onlyPart = part;

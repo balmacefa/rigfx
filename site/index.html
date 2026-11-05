@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>rigfx — one animation, any body</title>
+<meta name="description" content="Retarget one 2D pixel-art animation library onto characters of any proportions. Free, MIT, runs on CPU.">
+<style>
+:root{color-scheme:dark;--bg:#0f0e14;--card:#1a1824;--ink:#e9e6f5;--mut:#9a95b3;--acc:#ffb84a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,Segoe UI,sans-serif}
+header,main,footer{max-width:1100px;margin:0 auto;padding:24px}
+h1{font-size:2.2rem;margin:.2em 0}h1 span{color:var(--acc)}p.lead{color:var(--mut);max-width:62ch}
+a{color:var(--acc)}nav a{margin-right:16px}
+.moves{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+button{background:var(--card);color:var(--ink);border:1px solid #38344d;border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit}
+button[aria-pressed=true]{background:var(--acc);color:#1a1206;border-color:var(--acc)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{background:var(--card);border-radius:12px;padding:12px}
+.card img{width:100%;image-rendering:pixelated;background:#14121c;border-radius:8px;display:block}
+.card h3{margin:.6em 0 .2em;font-size:1rem}.card code{color:var(--mut);font-size:.78rem;line-height:1.4;display:block}
+pre{background:var(--card);padding:14px;border-radius:10px;overflow:auto;font-size:.85rem}
+footer{color:var(--mut);font-size:.9rem}
+</style></head><body>
+<header>
+<nav><a href="https://www.balmacefa.com">balmacefa.com</a><a href="https://github.com/balmacefa/rigfx">GitHub</a></nav>
+<h1>rig<span>fx</span> — one animation, any body</h1>
+<p class="lead">A pixel-art skeleton rig whose animations are body-independent. Define a character as a few proportion multipliers in a JSON file and every existing move (sword combo, fireball, ground pound…) re-aims hands and feet to the new limbs. No re-animating, no GPU, MIT licensed. <span lang="es">· Una animación, cualquier cuerpo: define las proporciones en un JSON y reutiliza todos los movimientos.</span></p>
+</header>
+<main>
+<div class="moves" id="moves" role="group" aria-label="Move"></div>
+<div class="grid" id="grid"></div>
+<h2>Add your own character</h2>
+<pre>{ "name": "giant",
+  "body": { "legS": 1.35, "torsoS": 1.3, "armS": 1.4, "headS": 0.9, "thick": 1.5, "widthS": 1.3 },
+  "pal":  { "shell": ["#dff7c8","#a7e07c","#6cc04a","#479632"], "core": ["#4f9630","#357024","#235018","#235018"],
+            "ink": "#0c1a08", "seam": "#163a12", "mark": "#d0ff90" } }</pre>
+<p>Drop it in <code>chars2d/</code> and run <code>node retarget.mjs</code>. Full steps in the <a href="https://github.com/balmacefa/rigfx#readme">README</a>.</p>
+</main>
+<footer>Built on <a href="https://github.com/patch-gg/pixelfx">patch-gg/pixelfx</a> (MIT): the effects and the 3D-to-pixels rig are theirs. The body retargeting layer and character library are MIT © balmacefa. Known limit: weapons don't scale with the body yet.</footer>
+<script>
+const $=s=>document.querySelector(s);let CH={},IDX=[];
+const moves=()=>[...new Set(IDX.map(i=>i.move))];
+function show(m){history.replaceState(null,'','#'+m);
+  document.querySelectorAll('#moves button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m));
+  $('#grid').innerHTML=Object.keys(CH).map(c=>{const b=CH[c].body;
+    return `<div class="card"><img loading="lazy" alt="${c} doing ${m}" src="media/${c}-${m}.gif"><h3>${c}</h3><code>${b?Object.entries(b).map(([k,v])=>k+' '+v).join(' · '):'stock body'}</code></div>`}).join('')}
+Promise.all([fetch('media/index.json').then(r=>r.json()),fetch('media/chars.json').then(r=>r.json())]).then(([i,c])=>{IDX=i;CH=c;
+  $('#moves').innerHTML=moves().map(m=>`<button data-m="${m}" aria-pressed="false">${m.replace(/-/g,' ')}</button>`).join('');
+  $('#moves').onclick=e=>e.target.dataset.m&&show(e.target.dataset.m);
+  show(location.hash.slice(1)||'sword-combo')});
+</script></body></html>
