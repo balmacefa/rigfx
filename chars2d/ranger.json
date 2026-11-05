@@ -1,0 +1,1 @@
+{"name": "ranger", "body": {"legS": 1.2, "torsoS": 1.05, "armS": 1.15, "headS": 0.9, "neckS": 1.1, "thick": 0.75, "widthS": 0.85, "headGear": ["ears", "hood"], "bodyGear": ["cape", "belt"]}, "pal": {"shell": ["#f2ead6", "#d8c9a0", "#a8946a", "#74633f"], "core": ["#3f7a3a", "#2b5728", "#1d3d1b", "#1d3d1b"], "ink": "#140f06", "seam": "#2e2410", "mark": "#c8ff80"}}

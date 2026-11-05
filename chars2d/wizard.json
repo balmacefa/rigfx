@@ -1,0 +1,1 @@
+{"name": "wizard", "body": {"legS": 1.0, "torsoS": 1.05, "armS": 0.95, "headS": 1.0, "thick": 0.85, "widthS": 0.9, "headGear": ["wizardhat"], "bodyGear": ["cape", "belt"]}, "pal": {"shell": ["#e8ecff", "#a9b7f2", "#6f82d6", "#4a5aa8"], "core": ["#7a46b0", "#542d84", "#3d1f63", "#3d1f63"], "ink": "#0c1030", "seam": "#1c2552", "mark": "#ffe070"}}

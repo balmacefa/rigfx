@@ -1,0 +1,1 @@
+{"name": "demonlord", "body": {"legS": 1.15, "torsoS": 1.15, "armS": 1.2, "headS": 1.0, "thick": 1.15, "widthS": 1.25, "headGear": ["horns"], "bodyGear": ["tail", "cape", "pauldrons"]}, "pal": {"shell": ["#ffd6c4", "#f28a6a", "#d6543a", "#a83522"], "core": ["#2a1020", "#1c0a16", "#10060e", "#10060e"], "ink": "#12060a", "seam": "#45120a", "mark": "#ffcc40"}}

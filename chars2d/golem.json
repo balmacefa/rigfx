@@ -1,0 +1,1 @@
+{"name": "golem", "body": {"legS": 1.1, "torsoS": 1.4, "armS": 1.35, "headS": 0.65, "neckS": 0.5, "thick": 1.9, "widthS": 1.7, "headGear": [], "bodyGear": ["pauldrons"]}, "pal": {"shell": ["#e9e6e0", "#bdb8ae", "#8c877c", "#5e5a50"], "core": ["#5ad0a0", "#3a9b74", "#246449", "#246449"], "ink": "#0d0d0b", "seam": "#2a2a24", "mark": "#a8ffd8"}}

@@ -1,0 +1,1 @@
+{"name": "punk", "body": {"legS": 1.1, "torsoS": 0.9, "armS": 0.95, "headS": 1.15, "thick": 0.85, "widthS": 0.9, "headGear": ["mohawk"], "bodyGear": ["belt"]}, "pal": {"shell": ["#ffe0f2", "#f59ad0", "#d9609f", "#a23a75"], "core": ["#2a2a3a", "#1c1c28", "#10101a", "#10101a"], "ink": "#14060f", "seam": "#3a1230", "mark": "#7dffea"}}

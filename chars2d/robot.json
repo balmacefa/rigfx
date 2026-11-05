@@ -1,0 +1,1 @@
+{"name": "robot", "body": {"legS": 0.95, "torsoS": 1.0, "armS": 1.0, "headS": 0.95, "neckS": 0.4, "thick": 1.25, "widthS": 1.2, "headGear": ["antenna"], "bodyGear": ["backpack", "belt"]}, "pal": {"shell": ["#f2fbff", "#c4dde8", "#8fb0c2", "#5f7f92"], "core": ["#2aa5c8", "#1d7894", "#134f63", "#134f63"], "ink": "#081217", "seam": "#16303b", "mark": "#7dffd8"}}

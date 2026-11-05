@@ -21,9 +21,13 @@ footer{color:var(--mut);font-size:.9rem}
 <header>
 <nav><a href="https://www.balmacefa.com">balmacefa.com</a><a href="https://github.com/balmacefa/rigfx">GitHub</a></nav>
 <h1>rig<span>fx</span> — one animation, any body</h1>
-<p class="lead">A pixel-art skeleton rig whose animations are body-independent. Define a character as a few proportion multipliers in a JSON file and every existing move (sword combo, fireball, ground pound…) re-aims hands and feet to the new limbs. No re-animating, no GPU, MIT licensed. <span lang="es">· Una animación, cualquier cuerpo: define las proporciones en un JSON y reutiliza todos los movimientos.</span></p>
+<p class="lead">A pixel-art skeleton rig whose animations are body-independent. Define a character as a few proportion multipliers in a JSON file and every existing move (sword combo, fireball, ground pound…) re-aims hands and feet to the new limbs. 17 bodies so far, styled with procedural helmets, horns, hats and capes. No re-animating, no GPU, MIT licensed. <span lang="es">· Una animación, cualquier cuerpo: define las proporciones en un JSON y reutiliza todos los movimientos.</span></p>
 </header>
 <main>
+<figure style="margin:0 0 28px"><video controls playsinline preload="metadata" poster="media/rigfx-demo-poster.jpg" style="width:100%;border-radius:14px;display:block;background:#000">
+<source src="media/rigfx-demo.mp4" type="video/mp4">
+Your browser does not support the video tag.</video>
+<figcaption style="color:var(--mut);font-size:.9rem;margin-top:8px">2-minute tour: 17 characters, 12 moves, one rig. Narration and backgrounds generated on GPU for pennies; every animation rendered on CPU.</figcaption></figure>
 <div class="moves" id="moves" role="group" aria-label="Move"></div>
 <div class="grid" id="grid"></div>
 <h2>Add your own character</h2>

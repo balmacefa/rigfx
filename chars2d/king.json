@@ -1,0 +1,1 @@
+{"name": "king", "body": {"legS": 0.85, "torsoS": 1.15, "armS": 0.95, "headS": 1.05, "neckS": 0.7, "thick": 1.3, "widthS": 1.3, "headGear": ["crown"], "bodyGear": ["cape", "belt"]}, "pal": {"shell": ["#ffe9a8", "#e8c15a", "#c89632", "#8a6420"], "core": ["#7a1f2e", "#59151f", "#3d0e15", "#3d0e15"], "ink": "#1a1206", "seam": "#3a2a0a", "mark": "#ffffff"}}

@@ -5,7 +5,8 @@ Live demo: https://rigfx.balmacefa.com (also https://balmacefa.github.io/rigfx/)
 
 A character is a JSON file of proportion multipliers (`legS`, `torsoS`, `armS`, `headS`, `neckS`, `widthS`, `thick`) plus a palette.
 The rig solves every pose from where the hands and feet should go. The retargeting layer re-aims those targets to the new limb lengths, so
-the same 12 moves (sword combo, fireball, ground pound, rocket launcher...) fit a giant, a chibi, a lanky mage or a long-armed brute.
+the same 12 moves (sword combo, fireball, ground pound, rocket launcher...) fit 17 different bodies: a giant, a chibi, a golem, a lanky mage, a long-armed brute...
+Style comes from procedural gear listed in the same JSON: `headGear` (helmet, visor, horns, wizardhat, hood, ears, mohawk, tusks, antenna, bighair, crown) and `bodyGear` (pauldrons, cape, belt, backpack, tail).
 
 ## Run it
 ```bash

@@ -1,0 +1,1 @@
+{"name": "knight", "body": {"legS": 1.05, "torsoS": 1.1, "armS": 1.05, "headS": 0.95, "thick": 1.2, "widthS": 1.2, "headGear": ["helmet", "visor"], "bodyGear": ["pauldrons", "cape", "belt"]}, "pal": {"shell": ["#f4f7fb", "#cfd8e6", "#9aa8bf", "#66748f"], "core": ["#b0352f", "#862520", "#5e1a16", "#5e1a16"], "ink": "#0e1118", "seam": "#2b3140", "mark": "#ffd84a"}}

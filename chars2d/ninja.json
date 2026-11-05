@@ -1,0 +1,1 @@
+{"name": "ninja", "body": {"legS": 1.1, "torsoS": 0.95, "armS": 1.05, "headS": 0.9, "thick": 0.8, "widthS": 0.85, "headGear": ["hood"], "bodyGear": ["belt"]}, "pal": {"shell": ["#8a8fa6", "#5d6178", "#3d4054", "#26283a"], "core": ["#c8302c", "#962320", "#661614", "#661614"], "ink": "#07070c", "seam": "#14141f", "mark": "#ff5050"}}

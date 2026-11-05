@@ -1,0 +1,1 @@
+{"name": "warlord", "body": {"legS": 0.9, "torsoS": 1.2, "armS": 1.15, "headS": 0.85, "neckS": 0.6, "thick": 1.45, "widthS": 1.5, "headGear": ["tusks", "mohawk"], "bodyGear": ["pauldrons", "belt"]}, "pal": {"shell": ["#dff7c8", "#a7e07c", "#6cc04a", "#479632"], "core": ["#6b4a2a", "#4a3219", "#33220e", "#33220e"], "ink": "#0c1a08", "seam": "#163a12", "mark": "#ffd070"}}
