@@ -37,7 +37,7 @@ Your browser does not support the video tag.</video>
             "ink": "#0c1a08", "seam": "#163a12", "mark": "#d0ff90" } }</pre>
 <p>Drop it in <code>chars2d/</code> and run <code>node retarget.mjs</code>. Full steps in the <a href="https://github.com/balmacefa/rigfx#readme">README</a>.</p>
 </main>
-<footer>Built on <a href="https://github.com/patch-gg/pixelfx">patch-gg/pixelfx</a> (MIT): the effects and the 3D-to-pixels rig are theirs. The body retargeting layer and character library are MIT © balmacefa. Known limit: weapons don't scale with the body yet.</footer>
+<footer>Built on <a href="https://github.com/patch-gg/pixelfx">patch-gg/pixelfx</a> (MIT): the effects and the 3D-to-pixels rig are theirs. The body retargeting layer and character library are MIT © balmacefa. Weapons and jumps scale with the body.</footer>
 <script>
 const $=s=>document.querySelector(s);let CH={},IDX=[];
 const moves=()=>[...new Set(IDX.map(i=>i.move))];

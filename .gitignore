@@ -1,3 +1,7 @@
 anim/
 node_modules/
 pixelfx/
+dist/
+__pycache__/
+*.pyc
+video-work/

@@ -1,0 +1,43 @@
+{
+  "name": "rigfx-demo",
+  "voice": { "endpoint": "dovnz0ml2w3kqa", "exaggeration": 0.45, "cfg_weight": 0.5, "temperature": 0.75 },
+  "image": { "endpoint": "black-forest-labs-flux-1-schnell", "width": 1344, "height": 768, "steps": 4, "style": "wide scenic game background, no characters, 16-bit style" },
+  "bg": {
+    "forest": "pixel art fantasy forest clearing at golden dusk, layered parallax trees, rich colors",
+    "night": "pixel art night sky over rolling hills with huge moon and stars, deep blue and purple",
+    "volcano": "pixel art volcanic wasteland with lava rivers and glowing red sky"
+  },
+  "subs_replace": { "rigfx dot balmacefa dot com": "rigfx.balmacefa.com", "balmacefa slash rigfx": "balmacefa/rigfx" },
+  "segments": [
+    {
+      "id": "s01", "bg": "forest", "text": "Meet rigfx. One animation, any body.",
+      "scene": {
+        "type": "title",
+        "title": { "y": 150, "lines": [ { "text": "rigfx", "size": 190, "color": "accent" }, { "text": "one animation, any body", "size": 64 } ] },
+        "clips": [ { "clip": "stock:sword-combo", "x": 330, "y": 900, "scale": 3.2 }, { "clip": "giant:sword-combo", "x": 645, "y": 900, "scale": 3.2 }, { "clip": "chibi:sword-combo", "x": 960, "y": 900, "scale": 3.2 }, { "clip": "wizard:sword-combo", "x": 1275, "y": 900, "scale": 3.2 }, { "clip": "robot:sword-combo", "x": 1590, "y": 900, "scale": 3.2 } ]
+      }
+    },
+    {
+      "id": "s02", "bg": "night", "text": "A character is just a small JSON file. A few multipliers for legs, arms, torso and head, a gear list, and a palette. That is all.",
+      "scene": {
+        "type": "code",
+        "panel": { "box": [60, 150, 1090, 690], "alpha": 175, "x": 95, "y": 185, "step": 62, "lines": [ { "text": "{ \"name\": \"giant\",", "size": 41, "mono": true, "color": [255, 214, 140] }, { "text": "  \"body\": { \"legS\": 1.35, \"armS\": 1.4,", "size": 41, "mono": true, "color": [255, 214, 140] }, { "text": "    \"thick\": 1.5, \"headS\": 0.9 } }", "size": 41, "mono": true, "color": [255, 214, 140] } ] },
+        "clips": [ { "clip": "giant:sword-combo", "x": 1520, "y": 900, "scale": 4.6, "label": "giant", "labelSize": 34 } ]
+      }
+    },
+    {
+      "id": "s03", "bg": "volcano", "text": "And every move works on every body. Meteors from the demon lord. Lightning from the robot. And a holy smite from the king.",
+      "scene": {
+        "type": "4up",
+        "grid": { "cols": 3, "cellW": 640, "cellH": 470, "y0": 300, "scale": 2.7, "items": [ { "clip": "demonlord:meteor-call", "label": "demon lord · meteors" }, { "clip": "robot:lightning-call", "label": "robot · lightning" }, { "clip": "king:holy-smite", "label": "king · holy smite" } ] }
+      }
+    },
+    {
+      "id": "s04", "bg": "forest", "text": "It is open source under the MIT license. Find it at rigfx dot balmacefa dot com, and on GitHub under balmacefa slash rigfx.",
+      "scene": {
+        "type": "outro",
+        "title": { "y": 170, "lines": [ { "text": "rigfx.balmacefa.com", "size": 112, "color": "accent" }, { "text": "github.com/balmacefa/rigfx", "size": 60 }, { "text": "open source · MIT", "size": 44, "color": [200, 200, 220] } ] }
+      }
+    }
+  ]
+}

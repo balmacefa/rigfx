@@ -1,5 +1,45 @@
+diff --git a/src/core/act.js b/src/core/act.js
+index 731e56c..17e67ab 100644
+--- a/src/core/act.js
++++ b/src/core/act.js
+@@ -7,7 +7,7 @@ import { Rng, clamp } from "./math.js";
+ import { hex, mix } from "./color.js";
+ import { createFrame, clearFrame, createFx, painterFor } from "./fx.js";
+ import { stockActor, drawActor, actorAlphaOf, HERO2, DUMMY_PAL } from "./actor.js";
+-import { posed, STAND } from "./rig.js";
++import { posed, STAND, bodyShift } from "./rig.js";
+ 
+ export { STAND, posed };
+ 
+@@ -322,7 +322,7 @@ export function createAct(mod, o = {}) {
+         drawStraw();
+         return;
+       }
+-      const rx = Math.round(q.x ?? 0), ry = Math.round(q.y ?? 0), BX = FX + (flip ? -rx : rx), BY = FY + ry;
++      const [bsx, bsy] = bodyShift(q.x, q.y), rx = Math.round(bsx), ry = Math.round(bsy), BX = FX + (flip ? -rx : rx), BY = FY + ry;
+       const r = posed(q), mirror = flip;
+       const paint = (i, color) => {
+         const px = mirror ? BX - r.xs[i] - 1 : BX + r.xs[i], py = BY + r.ys[i];
+@@ -334,7 +334,7 @@ export function createAct(mod, o = {}) {
+       const drawGhosts = () => {
+         for (const g of ghosts) {
+           // after-images are light, not paint: they brighten what's behind them and leave nothing muddy
+-          const gr = posed(g.q), gx = FX + (flip ? -Math.round(g.q.x ?? 0) : Math.round(g.q.x ?? 0)), gy = FY + Math.round(g.q.y ?? 0), k = 0.5 * (1 - g.age / GHOST_LIFE);
++          const gr = posed(g.q), [gsx, gsy] = bodyShift(g.q.x, g.q.y), gx = FX + (flip ? -Math.round(gsx) : Math.round(gsx)), gy = FY + Math.round(gsy), k = 0.5 * (1 - g.age / GHOST_LIFE);
+           const gm = flip, r0 = (gc & 255) * k, g0 = ((gc >>> 8) & 255) * k, b0 = ((gc >>> 16) & 255) * k;
+           for (let i = 0; i < gr.n; i++) {
+             const px = gm ? gx - gr.xs[i] - 1 : gx + gr.xs[i], py = gy + gr.ys[i];
+@@ -470,7 +470,7 @@ export function actBounds(mod) {
+   const a = mod.act, [w, h] = mod.meta.size, [ox, oy] = mod.meta.origin;
+   let x0 = -ox, y0 = -oy, x1 = w - ox, y1 = h - oy;
+   const see = (p) => {
+-    const r = posed(p), X = Math.round(p.x ?? 0), Y = Math.round(p.y ?? 0), a = r.x0, b = r.x1;
++    const r = posed(p), [bx, by] = bodyShift(p.x, p.y), X = Math.round(bx), Y = Math.round(by), a = r.x0, b = r.x1;
+     x0 = Math.min(x0, a + X - 1); x1 = Math.max(x1, b + X + 1); y0 = Math.min(y0, r.y0 + Y - 1); y1 = Math.max(y1, r.y1 + Y + 1);
+   };
+   const k = a?.poses;
 diff --git a/src/core/rig.js b/src/core/rig.js
-index 525b714..168c18c 100644
+index 525b714..1ffb9af 100644
 --- a/src/core/rig.js
 +++ b/src/core/rig.js
 @@ -13,9 +13,15 @@ import { hex } from "./color.js";
@@ -20,7 +60,7 @@ index 525b714..168c18c 100644
  const DEG = Math.PI / 180, W0 = 24, H0 = 38;
  
  // ---- vectors and turns
-@@ -34,10 +40,45 @@ const tv = (M, v) => [M[0] * v[0] + M[3] * v[1] + M[6] * v[2], M[1] * v[0] + M[4
+@@ -34,10 +40,51 @@ const tv = (M, v) => [M[0] * v[0] + M[3] * v[1] + M[6] * v[2], M[1] * v[0] + M[4
  const clamp01 = (v) => Math.max(0, Math.min(1, v));
  
  // ---- the body's measurements, in pixels
@@ -31,7 +71,8 @@ index 525b714..168c18c 100644
  };
 +let M = { ...M0 };
 +let RS = 1; // radius scale for whatever is being drawn
-+const K = { thick: 1, head: 1, hg: [], bg: [] };
++const K = { thick: 1, head: 1, hg: [], bg: [], ws: 1 };
++const NORM = { sx: 1, sy: 1, tx: 1, ty: 1 }; // sx/sy: body px -> stock 24x38 grid (for `src`); tx/ty: pose translation scale
 +const REST_BY_BODY = new Map();
 +const BASE_SH = { x: 0, y: M0.pelvis + M0.spine1 + M0.spine2 + M0.shoulderUp };
 +/**
@@ -46,6 +87,11 @@ index 525b714..168c18c 100644
 +    spine1: M0.spine1 * torsoS, spine2: M0.spine2 * torsoS, shoulderUp: M0.shoulderUp * torsoS, neckUp: M0.neckUp * neckS * headS, headUp: M0.headUp * headS,
 +    upper: M0.upper * armS, fore: M0.fore * armS, hipOut: M0.hipOut * widthS, shoulderOut: M0.shoulderOut * widthS };
 +  K.thick = o.thick ?? 1; K.head = headS; K.hg = o.headGear || []; K.bg = o.bodyGear || [];
++  K.ws = o.weaponS ?? armS; // weapons grow with the arms unless the profile says otherwise
++  // body px -> stock grid, so effects pinned to the body (`src`) still land on it
++  const stockH = M0.pelvis + M0.spine1 + M0.spine2 + M0.neckUp + M0.headUp + 3.3, bodyH = M.pelvis + M.spine1 + M.spine2 + M.neckUp + M.headUp + 3.3 * K.head;
++  NORM.sy = stockH / bodyH; NORM.sx = 1 / K.thick;
++  NORM.ty = legS; NORM.tx = (legS + torsoS) / 2; // pose x/y (jumps, dashes) in body terms
 +}
 +// re-aim hands and feet (pose coordinates) to the current body
 +function retarget(q) {
@@ -67,7 +113,16 @@ index 525b714..168c18c 100644
  /** Standing easy, in screen terms: hands and feet are where they should end up, y negative is up. */
  export const STAND = { lean: 0, crouch: 0, yaw: 0, fx: -3, fy: -15, bx: 5, by: -15, ffx: -2, ffy: -4, fbx: 3, fby: -4 };
  
-@@ -157,6 +198,7 @@ function plot(i, z, tone, part, mat, wx, wy, color) {
+@@ -101,7 +148,7 @@ function solve(pose) {
+     return add(base, mul(unit(to), Math.min(1.8, Math.max(0, d - 11) * 0.35)));
+   };
+   const nearT = [q.fx, -q.fy, nearZ];
+-  const farT = two ? [q.fx + axis[0] * W.two, -q.fy + axis[1] * W.two, nearZ + axis[2] * W.two] : [q.bx, -q.by, q.bz ?? (q.armsFront ? 5.5 : -4.5)];
++  const farT = two ? [q.fx + axis[0] * W.two * K.ws, -q.fy + axis[1] * W.two * K.ws, nearZ + axis[2] * W.two * K.ws] : [q.bx, -q.by, q.bz ?? (q.armsFront ? 5.5 : -4.5)];
+   const sN = pick(1, nearT), sF = pick(-1, farT);
+   const pole = (s, T, shoulder, hold) => {
+     // elbows hang down and back; overhead they go out and forward
+@@ -157,6 +204,7 @@ function plot(i, z, tone, part, mat, wx, wy, color) {
    Col[i] = color;
  }
  function sphere(c, r, part, mat) {
@@ -75,7 +130,7 @@ index 525b714..168c18c 100644
    const x0 = Math.floor(c[0] - r), x1 = Math.ceil(c[0] + r), y0 = Math.floor(c[1] - r), y1 = Math.ceil(c[1] + r);
    for (let wy = y0; wy <= y1; wy++)
      for (let wx = x0; wx <= x1; wx++) {
-@@ -167,14 +209,18 @@ function sphere(c, r, part, mat) {
+@@ -167,14 +215,18 @@ function sphere(c, r, part, mat) {
      }
  }
  function sweep(a, b, ra, rb, part, mat, bulge = 0) {
@@ -94,7 +149,7 @@ index 525b714..168c18c 100644
    const big = Math.max(r[0], r[1], r[2]), x0 = Math.floor(c[0] - big), x1 = Math.ceil(c[0] + big), y0 = Math.floor(c[1] - big), y1 = Math.ceil(c[1] + big);
    const Rt = [R[0], R[3], R[6], R[1], R[4], R[7], R[2], R[5], R[8]], D = [1 / (r[0] * r[0]), 1 / (r[1] * r[1]), 1 / (r[2] * r[2])];
    // A = R diag(D) R^T
-@@ -198,6 +244,7 @@ const useFrame = (name) => { curFrameIndex = FRAME_IDS.indexOf(name); };
+@@ -198,6 +250,7 @@ const useFrame = (name) => { curFrameIndex = FRAME_IDS.indexOf(name); };
  
  function drawBody(S) {
    const { B, armN, armF, legN, legF, sN, sF, hipN, hipF, turn } = S, F_ = (name) => B[name];
@@ -102,7 +157,7 @@ index 525b714..168c18c 100644
    useFrame("pelvis");
    ellipsoid(add(F_("pelvis").t, mv(F_("pelvis").R, [0, -0.2, 0])), F_("pelvis").R, [2.9, 2.6, 4.2], PART.pelvis, 0);
    useFrame("waist");
-@@ -207,8 +254,32 @@ function drawBody(S) {
+@@ -207,8 +260,32 @@ function drawBody(S) {
    useFrame("neck");
    sweep(F_("neck").t, add(F_("neck").t, mv(F_("head").R, [0, 1.6, 0])), 1.25, 1.15, PART.neck, 1);
    useFrame("head");
@@ -135,7 +190,7 @@ index 525b714..168c18c 100644
    const arm = (far, A, sh, up, el, fo, ha, nameU, nameF) => {
      curDim = far ? 1 : 0;
      useFrame(nameU);
-@@ -234,6 +305,7 @@ function drawBody(S) {
+@@ -234,13 +311,15 @@ function drawBody(S) {
    };
    leg(false, legN, hipN, PART.thighN, PART.kneeN, PART.shinN, PART.footN, "thighN", "shinN", "footN");
    leg(true, legF, hipF, PART.thighF, PART.kneeF, PART.shinF, PART.footF, "thighF", "shinF", "footF");
@@ -143,7 +198,25 @@ index 525b714..168c18c 100644
    void turn;
  }
  
-@@ -353,6 +425,9 @@ export const WEAPONS = {
+ // ---- what they hold: drawn along the handle from the fist, through the same depth buffer
+ function along(H, axis, side, part) {
+-  const n = cross(axis, side);
++  const n = cross(axis, side), ws = K.ws;
+   const T = (i, k, c, lift = 0) => {
++    i *= ws; k *= ws; lift *= ws;
+     const x = H[0] + axis[0] * i + side[0] * k + n[0] * lift, y = H[1] + axis[1] * i + side[1] * k + n[1] * lift, z = H[2] + axis[2] * i + side[2] * k + n[2] * lift;
+     const wx = Math.round(x), wy = Math.round(y);
+     if (clipWeapon && wy < 0) return;
+@@ -249,7 +328,7 @@ function along(H, axis, side, part) {
+     curFrameIndex = -1;
+     plot(idx, z + 0.05, 2, part, 2, wx, wy, c);
+   };
+-  T.at = (i, k) => [H[0] + axis[0] * i + side[0] * k, H[1] + axis[1] * i + side[1] * k, H[2] + axis[2] * i + side[2] * k];
++  T.at = (i, k) => (i *= ws, k *= ws, [H[0] + axis[0] * i + side[0] * k, H[1] + axis[1] * i + side[1] * k, H[2] + axis[2] * i + side[2] * k]);
+   return T;
+ }
+ const STEEL = Object.fromEntries(Object.entries({ hi: "#ffffff", a: "#e8edf6", b: "#a4afc6", d: "#68748f", gold: "#ffd84a", goldD: "#b8862a", grip: "#7a3a2a", gripD: "#4a2018", wood: "#8a5a32", woodD: "#5a3820", dark: "#3a3448", darkD: "#262033", olive: "#58663f", oliveA: "#7d8c58", oliveD: "#3a4529" }).map(([k, v]) => [k, hex(v) >>> 0]));
+@@ -353,6 +432,9 @@ export const WEAPONS = {
  
  // ---- flat tones, seams, and one clean ink line
  function finish(S, restFrames) {
@@ -153,7 +226,16 @@ index 525b714..168c18c 100644
    const dim = (part) => part >= PART.upperF && part <= PART.handF ? 1 : part >= PART.thighF && part <= PART.footF ? 1 : 0;
    const toneOf = (v, part) => {
      let t = v > 0.8 ? 0 : v > 0.42 ? 1 : v > 0.08 ? 2 : 3;
-@@ -437,7 +512,7 @@ const turnAll = (S, a) => {
+@@ -407,7 +489,7 @@ function finish(S, restFrames) {
+     const f = Fr[i];
+     if (f < 0 || !restFrames) return -1;
+     const name = FRAME_IDS[f], A = B[name], R0 = restFrames[name], wx = (i % BW) - OX, wy = OY - ((i / BW) | 0), P = [wx, wy, Zb[i]];
+-    const lp = tv(A.R, sub(P, A.t)), rp = add(R0.t, mv(R0.R, lp)), c = Math.round(rp[0]) + 12, r = 38 - Math.round(rp[1]);
++    const lp = tv(A.R, sub(P, A.t)), rp = add(R0.t, mv(R0.R, lp)), c = Math.round(rp[0] * NORM.sx) + 12, r = 38 - Math.round(rp[1] * NORM.sy);
+     return c < 0 || r < 0 || c >= W0 || r >= H0 ? -1 : r * W0 + c;
+   };
+   let k = 0, x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+@@ -437,7 +519,7 @@ const turnAll = (S, a) => {
  };
  let REST_FRAMES = null;
  function render(pose) {
@@ -162,7 +244,7 @@ index 525b714..168c18c 100644
    if (whole) turnAll(S, whole);
    const air = (q.y ?? 0) < -0.5;
    clipBody = !air;
-@@ -455,6 +530,14 @@ function render(pose) {
+@@ -455,6 +537,14 @@ function render(pose) {
    return finish(S, REST_FRAMES);
  }
  REST_FRAMES = solve({}).B;
@@ -177,8 +259,15 @@ index 525b714..168c18c 100644
  
  const CACHE = new Map();
  const keyOf = (p) => {
-@@ -468,12 +551,13 @@ const keyOf = (p) => {
+@@ -466,14 +556,20 @@ const keyOf = (p) => {
+   }
+   return s;
  };
++/** Pose translation (x, y of a pose: jumps, dashes) in the current body's terms: stock bodies get it back unchanged. */
++export function bodyShift(x, y) {
++  enterBody();
++  return [(x ?? 0) * NORM.tx, (y ?? 0) * NORM.ty];
++}
  /** How far short of where the pose wants them the hands fall, in px: arms don't stretch. */
  export function shortfall(pose) {
 -  const S = solve(pose), q = S.q, near = len(sub(S.armN.end, [q.fx, -q.fy, S.armN.end[2]])), far = q.two ? 0 : len(sub(S.armF.end, [q.bx, -q.by, S.armF.end[2]]));
@@ -193,7 +282,7 @@ index 525b714..168c18c 100644
    let r = CACHE.get(key);
    if (!r) {
      if (CACHE.size > 6000) CACHE.clear();
-@@ -488,7 +572,8 @@ export function posed(pose) {
+@@ -488,7 +584,8 @@ export function posed(pose) {
   * are what a pose moves (hands and feet); everything else is solved from them.
   */
  export function skeleton(pose) {
@@ -203,7 +292,7 @@ index 525b714..168c18c 100644
    if (whole) turnAll(S, whole);
    const { B, armN, armF, legN, legF, sN, sF, hipN, hipF } = S, at = (f, v) => add(f.t, mv(f.R, v));
    const J = {
-@@ -502,6 +587,7 @@ export function skeleton(pose) {
+@@ -502,6 +599,7 @@ export function skeleton(pose) {
  }
  /** The figure taken apart: each part drawn alone, with its own outline, and where its middle is. For exploded views. */
  export function posedParts(pose) {

@@ -1,0 +1,15 @@
+{
+  "name": "rigfx",
+  "version": "0.2.0",
+  "description": "One animation, any body: retarget a 2D pixel-art rig animation library onto characters of any proportions.",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "retarget": "node retarget.mjs",
+    "new-character": "node tools/new-character.mjs",
+    "media": "python scripts/make_media.py",
+    "sheets": "python tools/export_sheets.py",
+    "publish:dry": "bash tools/publish.sh"
+  }
+}
