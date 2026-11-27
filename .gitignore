@@ -5,3 +5,4 @@ dist/
 __pycache__/
 *.pyc
 video-work/
+godot-game/.godot/
