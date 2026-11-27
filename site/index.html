@@ -41,6 +41,15 @@ Your browser does not support the video tag.</video><style>video:focus-visible{o
   "pal":  { "shell": ["#dff7c8","#a7e07c","#6cc04a","#479632"], "core": ["#4f9630","#357024","#235018","#235018"],
             "ink": "#0c1a08", "seam": "#163a12", "mark": "#d0ff90" } }</pre>
 <p>Drop it in <code>chars2d/</code> and run <code>node retarget.mjs</code>. Full steps in the <a href="https://github.com/balmacefa/rigfx#readme">README</a>.</p>
+<section id="autopilot" style="margin-top:44px">
+<h2>Autopilot &mdash; what the bots shipped</h2>
+<p class="lead" style="margin-top:0">Two n8n workflows run this site on their own. <b>auto-publish</b> renders and pushes every 6&nbsp;hours; <b>content generator</b> drafts a new character every day. Live feed:</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="ap-cols">
+  <div><h3 style="color:var(--acc);margin:.2em 0 .6em">Recent auto-publishes</h3><div id="ap-commits">loading&hellip;</div></div>
+  <div><h3 style="color:var(--acc);margin:.2em 0 .6em">Generated character drafts</h3><div id="ap-drafts">loading&hellip;</div></div>
+</div>
+<style>@media(max-width:680px){#ap-cols{grid-template-columns:1fr!important}}</style>
+</section>
 </main>
 <footer>Built on <a href="https://github.com/patch-gg/pixelfx">patch-gg/pixelfx</a> (MIT): the effects and the 3D-to-pixels rig are theirs. The body retargeting layer and character library are MIT © balmacefa. Weapons and jumps scale with the body.</footer>
 <script>
@@ -54,4 +63,12 @@ Promise.all([fetch('media/index.json').then(r=>r.json()),fetch('media/chars.json
   $('#moves').innerHTML=moves().map(m=>`<button data-m="${m}" aria-pressed="false">${m.replace(/-/g,' ')}</button>`).join('');
   $('#moves').onclick=e=>e.target.dataset.m&&show(e.target.dataset.m);
   show(location.hash.slice(1)||'sword-combo')});
-</script></body></html>
+</script><script>
+fetch('https://n8n-public.balmacefa.com/webhook/rigfx-autopilot').then(r=>r.json()).then(d=>{
+  var c=document.getElementById('ap-commits');
+  c.innerHTML=(d.commits||[]).map(function(x){return '<div class="card" style="padding:10px 12px;margin-bottom:8px"><code style="color:var(--acc)">'+x.h+'</code> '+(x.s||'').replace(/</g,'&lt;')+'<br><span style="color:var(--mut);font-size:.76rem">'+(x.d||'')+'</span></div>'}).join('')||'<p style="color:var(--mut)">no data</p>';
+  var dr=((d.drafts||'')+'').trim();
+  document.getElementById('ap-drafts').innerHTML=dr?'<pre style="max-height:440px;white-space:pre-wrap;margin:0">'+dr.replace(/</g,'&lt;')+'</pre>':'<p style="color:var(--mut)">no drafts yet</p>';
+}).catch(function(){document.getElementById('ap-commits').innerHTML='<p style="color:var(--mut)">feed offline</p>';document.getElementById('ap-drafts').innerHTML='';});
+</script>
+</body></html>
