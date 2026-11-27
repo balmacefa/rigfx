@@ -1,0 +1,48 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>rigfx arena — play with the rig</title>
+<style>
+:root{--bg:#0f0e14;--card:#1a1824;--ink:#e9e6f5;--mut:#9a95b3;--acc:#ffb84a;--hp:#6cca4e;--dmg:#ff5a5a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,Segoe UI,sans-serif;text-align:center}
+header{max-width:900px;margin:0 auto;padding:18px}h1{margin:.2em 0}h1 span{color:var(--acc)}a{color:var(--acc)}
+.arena{display:flex;justify-content:space-around;align-items:flex-end;max-width:720px;margin:10px auto;gap:12px}
+.fighter{background:var(--card);border-radius:12px;padding:10px;width:46%}
+.fighter img{width:100%;image-rendering:pixelated;background:#14121c;border-radius:8px}
+.bar{height:12px;background:#38344d;border-radius:6px;overflow:hidden;margin:6px 0}
+.bar>i{display:block;height:100%;background:var(--hp);transition:width .25s}
+.moves{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:720px;margin:12px auto}
+button{background:var(--card);color:var(--ink);border:1px solid #38344d;border-radius:8px;padding:8px 12px;cursor:pointer;font:inherit;transition:all .15s}
+button:hover{border-color:var(--acc)}button:disabled{opacity:.4;cursor:default}
+#msg{min-height:1.4em;color:var(--mut)}#score{color:var(--acc);font-weight:bold}
+</style></head><body>
+<header><h1>rigfx <span>arena</span></h1>
+<p>Pick a move to attack. Beat a foe and a new rig steps in. Wins: <span id="score">0</span></p>
+<p><a href="/">&larr; back to rigfx</a></p></header>
+<div class="arena">
+  <div class="fighter"><div id="hname">you</div><img id="hero" alt="hero"/><div class="bar"><i id="hhp" style="width:100%"></i></div></div>
+  <div class="fighter"><div id="ename">foe</div><img id="foe" alt="foe"/><div class="bar"><i id="ehp" style="width:100%"></i></div></div>
+</div>
+<div id="msg">loading the roster…</div>
+<div class="moves" id="moves"></div>
+<script>
+const MOVES=["sword-combo","fireball-throw","ice-lance-throw","lightning-call","meteor-call","ground-pound","rocket-launcher","holy-smite","dash-strike","earth-stomp","arrow-shot","pistol-shots"];
+const gif=(c,m)=>`media/${c}-${m}.gif`;
+let chars=[],hero,foe,hhp=100,ehp=100,score=0,busy=false;
+const $=s=>document.getElementById(s);
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+function setFoe(){foe=rnd(chars);ehp=100;$("ename").textContent=foe;$("foe").src=gif(foe,"sword-combo");$("ehp").style.width="100%";}
+function newGame(){hero=rnd(chars);setFoe();hhp=100;$("hname").textContent=hero;$("hero").src=gif(hero,"sword-combo");$("hhp").style.width="100%";$("score").textContent=score;}
+function play(img,c,m){img.src=gif(c,m)+"?x="+Math.random();}
+async function attack(m){if(busy)return;busy=true;
+  play($("hero"),hero,m);const dmg=12+Math.floor(Math.random()*18);ehp=Math.max(0,ehp-dmg);$("ehp").style.width=ehp+"%";
+  $("msg").textContent=`you used ${m.replace(/-/g," ")} (-${dmg})`;
+  await new Promise(r=>setTimeout(r,650));
+  if(ehp<=0){score++;$("score").textContent=score;$("msg").textContent=`${foe} down! a new challenger…`;await new Promise(r=>setTimeout(r,700));setFoe();busy=false;return;}
+  const em=rnd(MOVES);play($("foe"),foe,em);const edmg=8+Math.floor(Math.random()*14);hhp=Math.max(0,hhp-edmg);$("hhp").style.width=hhp+"%";
+  $("msg").textContent=`${foe} hits back with ${em.replace(/-/g," ")} (-${edmg})`;
+  await new Promise(r=>setTimeout(r,650));
+  if(hhp<=0){$("msg").textContent=`you fell after ${score} wins. restarting…`;score=0;await new Promise(r=>setTimeout(r,900));newGame();}
+  busy=false;}
+$("moves").innerHTML=MOVES.map(m=>`<button onclick="attack('${m}')">${m.replace(/-/g," ")}</button>`).join("");
+fetch("media/chars.json").then(r=>r.json()).then(c=>{chars=Object.keys(c);newGame();$("msg").textContent="fight!";}).catch(e=>{$("msg").textContent="could not load roster";});
+</script></body></html>
