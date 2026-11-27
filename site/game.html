@@ -22,6 +22,13 @@ kbd{background:var(--card);border:1px solid #38344d;border-radius:3px;padding:2p
 @keyframes flash{0%,100%{filter:brightness(1)}50%{filter:brightness(2.5) saturate(0)}}
 .shake{animation:shake .4s ease-in-out}
 .flash{animation:flash .3s ease-in-out}
+#picker{position:fixed;inset:0;background:rgba(15,14,20,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;padding:20px;overflow-y:auto}
+#picker h2{color:var(--acc);margin:10px 0 20px}
+#picker .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;max-width:800px;width:100%}
+#picker .char-card{background:var(--card);border:2px solid #38344d;border-radius:8px;padding:8px;cursor:pointer;transition:all .2s;text-align:center}
+#picker .char-card:hover{border-color:var(--acc);transform:translateY(-3px);box-shadow:0 4px 12px rgba(255,184,74,.3)}
+#picker .char-card img{width:100%;image-rendering:pixelated;background:#14121c;border-radius:4px;margin-bottom:6px}
+#picker .char-card .name{font-size:13px;color:var(--mut);text-transform:capitalize}
 </style></head><body>
 <header><h1>rigfx <span>arena</span></h1>
 <p>Pick a move to attack (or use keys <kbd>1</kbd>-<kbd>9</kbd>, <kbd>0</kbd>, <kbd>-</kbd>, <kbd>=</kbd>). Beat a foe and a new rig steps in. Wins: <span id="score">0</span></p>
@@ -35,11 +42,13 @@ kbd{background:var(--card);border:1px solid #38344d;border-radius:3px;padding:2p
 <script>
 const MOVES=["sword-combo","fireball-throw","ice-lance-throw","lightning-call","meteor-call","ground-pound","rocket-launcher","holy-smite","dash-strike","earth-stomp","arrow-shot","pistol-shots"];
 const gif=(c,m)=>`media/${c}-${m}.gif`;
-let chars=[],hero,foe,hhp=100,ehp=100,score=0,busy=false;
+let chars=[],hero,foe,hhp=100,ehp=100,score=0,busy=false,picked=false;
 const $=s=>document.getElementById(s);
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
-function setFoe(){foe=rnd(chars);ehp=100;$("ename").textContent=foe;$("foe").src=gif(foe,"sword-combo");$("ehp").style.width="100%";}
-function newGame(){hero=rnd(chars);setFoe();hhp=100;$("hname").textContent=hero;$("hero").src=gif(hero,"sword-combo");$("hhp").style.width="100%";$("score").textContent=score;}
+function setFoe(){foe=rnd(chars.filter(c=>c!==hero));ehp=100;$("ename").textContent=foe;$("foe").src=gif(foe,"sword-combo");$("ehp").style.width="100%";}
+function newGame(){if(!picked)return;setFoe();hhp=100;$("hname").textContent=hero;$("hero").src=gif(hero,"sword-combo");$("hhp").style.width="100%";$("score").textContent=score;}
+function showPicker(){const p=document.createElement('div');p.id='picker';p.innerHTML='<h2>choose your fighter</h2><div class="grid">'+chars.map(c=>`<div class="char-card" onclick="selectChar('${c}')"><img src="${gif(c,'sword-combo')}" alt="${c}"/><div class="name">${c}</div></div>`).join('')+'</div>';document.body.appendChild(p);}
+function selectChar(c){hero=c;picked=true;document.getElementById('picker').remove();newGame();$("msg").textContent="fight!";}
 function play(img,c,m){img.src=gif(c,m)+"?x="+Math.random();}
 async function attack(m){if(busy)return;busy=true;
   play($("hero"),hero,m);let dmg=12+Math.floor(Math.random()*18);const isCrit=Math.random()<0.18;if(isCrit){dmg=Math.floor(dmg*1.75);}ehp=Math.max(0,ehp-dmg);$("ehp").style.width=ehp+"%";
@@ -55,5 +64,5 @@ async function attack(m){if(busy)return;busy=true;
   busy=false;}
 $("moves").innerHTML=MOVES.map((m,i)=>{const keys=['1','2','3','4','5','6','7','8','9','0','-','='];return`<button id="btn${i}" onclick="attack('${m}')">${m.replace(/-/g," ")}<kbd>${keys[i]}</kbd></button>`;}).join("");
 document.addEventListener('keydown',e=>{const keys=['1','2','3','4','5','6','7','8','9','0','-','='];const idx=keys.indexOf(e.key);if(idx!==-1&&idx<MOVES.length){const btn=$("btn"+idx);if(!busy&&btn){btn.classList.add('pressed');attack(MOVES[idx]);setTimeout(()=>btn.classList.remove('pressed'),150);}}});
-fetch("media/chars.json").then(r=>r.json()).then(c=>{chars=Object.keys(c);newGame();$("msg").textContent="fight!";}).catch(e=>{$("msg").textContent="could not load roster";});
+fetch("media/chars.json").then(r=>r.json()).then(c=>{chars=Object.keys(c);showPicker();}).catch(e=>{$("msg").textContent="could not load roster";});
 </script></body></html>
