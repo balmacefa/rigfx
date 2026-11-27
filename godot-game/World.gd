@@ -9,10 +9,11 @@ const SPEED := 6.0
 const SPRINT := 11.0
 const JUMP := 7.5
 const GRAV := 20.0
-const MOUSE_SENS := 0.0025
+# 2.5D (HD-2D): fixed angled camera that follows the player, no free mouse look.
+const CAM_OFFSET := Vector3(0.0, 15.0, 12.0)
 
 var player: CharacterBody3D
-var yaw_pitch: Node3D
+var cam: Camera3D
 var hero: AnimatedSprite3D
 var pitch := -0.25
 var stamina := 1.0
@@ -23,9 +24,7 @@ var rng := RandomNumberGenerator.new()
 var http: HTTPRequest
 var content_root: Node3D
 var coins: Array = []
-var crystals: Array = []
 var frame_cache := {}
-var time := 0.0
 
 func _ready() -> void:
 	_setup_env_default()
@@ -214,15 +213,11 @@ func _entity(e: Dictionary, size: float) -> void:
 		logs.material_override = _mat(Color(0.3, 0.18, 0.1))
 		content_root.add_child(logs)
 	elif kind == "crystal":
-		var holder := Node3D.new()
-		holder.position = pos
 		var mi := MeshInstance3D.new()
 		var pm := PrismMesh.new(); pm.size = Vector3(1.4, 4.0, 1.4)
-		mi.mesh = pm; mi.position = Vector3(0, 2.0, 0)
+		mi.mesh = pm; mi.position = pos + Vector3(0, 2.0, 0)
 		mi.material_override = _mat(color, true)
-		holder.add_child(mi)
-		content_root.add_child(holder)
-		crystals.append(holder)
+		content_root.add_child(mi)
 	elif kind == "coin":
 		var mi := MeshInstance3D.new()
 		var cm := CylinderMesh.new(); cm.top_radius = 0.5; cm.bottom_radius = 0.5; cm.height = 0.12
@@ -255,7 +250,6 @@ func _build_world(data: Dictionary) -> void:
 	for c in content_root.get_children():
 		c.queue_free()
 	coins.clear()
-	crystals.clear()
 	var env_d: Dictionary = data.get("env", {})
 	var we := get_node_or_null("WE") as WorldEnvironment
 	if we and we.environment:
@@ -301,20 +295,15 @@ func _setup_player() -> void:
 	col.shape = cs
 	col.position = Vector3(0, 0.9, 0)
 	player.add_child(col)
-	hero = _rigfx_sprite("mantis", 0.012)
+	hero = _rigfx_sprite("mantis", 0.014)
 	hero.position = Vector3(0, 1.1, 0)
 	player.add_child(hero)
-	yaw_pitch = Node3D.new()
-	yaw_pitch.position = Vector3(0, 1.4, 0)
-	player.add_child(yaw_pitch)
-	var arm := SpringArm3D.new()
-	arm.spring_length = 6.0
-	yaw_pitch.add_child(arm)
-	var cam := Camera3D.new()
-	cam.position = Vector3(0, 0, 6)
-	arm.add_child(cam)
-	yaw_pitch.rotation.x = pitch
 	add_child(player)
+	# fixed 2.5D camera (child of the world, follows the player at a constant angle)
+	cam = Camera3D.new()
+	cam.global_position = player.global_position + CAM_OFFSET
+	add_child(cam)
+	cam.look_at(player.global_position + Vector3(0, 1.5, 0))
 
 func _setup_hud() -> void:
 	var cl := CanvasLayer.new()
@@ -331,28 +320,18 @@ func _setup_hud() -> void:
 	hud.add_theme_font_size_override("font_size", 15)
 	cl.add_child(hud)
 
-func _unhandled_input(e: InputEvent) -> void:
-	if e is InputEventMouseButton and e.pressed:
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	if e is InputEventKey and e.pressed and e.keycode == KEY_ESCAPE:
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	if e is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		player.rotate_y(-e.relative.x * MOUSE_SENS)
-		pitch = clamp(pitch - e.relative.y * MOUSE_SENS, -1.2, 0.4)
-		yaw_pitch.rotation.x = pitch
-
 func _physics_process(delta: float) -> void:
-	time += delta
 	var input := Vector3.ZERO
-	if Input.is_key_pressed(KEY_W): input.z -= 1.0
-	if Input.is_key_pressed(KEY_S): input.z += 1.0
-	if Input.is_key_pressed(KEY_A): input.x -= 1.0
-	if Input.is_key_pressed(KEY_D): input.x += 1.0
+	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP): input.z -= 1.0
+	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): input.z += 1.0
+	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT): input.x -= 1.0
+	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT): input.x += 1.0
 	var moving := input.length() > 0.0
 	var sprinting := Input.is_key_pressed(KEY_SHIFT) and stamina > 0.0 and moving
 	var spd := SPRINT if sprinting else SPEED
 	stamina = max(0.0, stamina - delta * 0.35) if sprinting else min(1.0, stamina + delta * 0.25)
-	var dir := (player.transform.basis * input).normalized()
+	# 2.5D: movement is in world axes aligned to the fixed camera; player never rotates
+	var dir := input.normalized()
 	player.velocity.x = dir.x * spd
 	player.velocity.z = dir.z * spd
 	if not player.is_on_floor():
@@ -360,7 +339,13 @@ func _physics_process(delta: float) -> void:
 	elif Input.is_key_pressed(KEY_SPACE):
 		player.velocity.y = JUMP
 	player.move_and_slide()
+	if absf(dir.x) > 0.01:
+		hero.flip_h = dir.x < 0.0
 	hero.speed_scale = 1.6 if sprinting else (1.0 if moving else 0.35)
+	# camera follows at the fixed 2.5D angle
+	if cam:
+		cam.global_position = player.global_position + CAM_OFFSET
+		cam.look_at(player.global_position + Vector3(0, 1.5, 0))
 	# coin spin + pickup
 	var ppos := player.global_position
 	for i in range(coins.size() - 1, -1, -1):
@@ -370,17 +355,5 @@ func _physics_process(delta: float) -> void:
 		c.rotate_y(delta * 3.0)
 		if ppos.distance_to(c.global_position) < 1.8:
 			c.queue_free(); coins.remove_at(i); score += 1
-	# crystal floating animation
-	for i in range(crystals.size() - 1, -1, -1):
-		var cr = crystals[i]
-		if not is_instance_valid(cr):
-			crystals.remove_at(i); continue
-		var offset := float(i) * 1.3
-		var bob := sin(time * 1.4 + offset) * 0.3
-		var sway := cos(time * 0.8 + offset) * 0.15
-		if cr.get_child_count() > 0:
-			cr.get_child(0).position.y = 2.0 + bob
-			cr.get_child(0).rotation.y = sway
-			cr.get_child(0).rotation.z = sin(time * 0.6 + offset) * 0.1
 	var p := player.global_position
-	hud.text = "WASD move - Shift sprint - Space jump - Mouse look - Esc cursor\npos %d, %d   stamina %d%%   coins %d" % [int(p.x), int(p.z), int(stamina * 100), score]
+	hud.text = "2.5D - WASD/arrows move - Shift sprint - Space jump\npos %d, %d   stamina %d%%   coins %d" % [int(p.x), int(p.z), int(stamina * 100), score]
