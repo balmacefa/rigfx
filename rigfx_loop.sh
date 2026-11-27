@@ -28,7 +28,10 @@ git -c user.name=balmacefa -c user.email=8296124+balmacefa@users.noreply.github.
 git push -q "https://x-access-token:${GITHUB_TOKEN}@github.com/balmacefa/rigfx.git" HEAD:main
 echo "== pushed $NAME =="
 
-curl -s -o /dev/null -w 'coolify deploy HTTP %{http_code}\n' \
+# Coolify API is behind Cloudflare Access on its public host, but reachable on
+# the internal docker gateway; use that so the container can trigger a redeploy.
+GW=$(ip route | awk '/default/{print $3}' | head -1)
+curl -s -X POST -o /dev/null -w 'coolify deploy HTTP %{http_code}\n' \
   -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
-  "https://main-coolify.balmacefa.com/api/v1/deploy?uuid=${APP_UUID}&force=false"
+  "http://${GW}:8000/api/v1/deploy?uuid=${APP_UUID}&force=false"
 echo "== done $NAME =="
