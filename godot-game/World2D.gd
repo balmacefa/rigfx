@@ -22,6 +22,7 @@ var frame_cache := {}
 var ground_rect: ColorRect
 
 func _ready() -> void:
+	print("W2D_READY_START")
 	RenderingServer.set_default_clear_color(Color(0.33, 0.52, 0.28))
 	content = Node2D.new()
 	add_child(content)
@@ -30,6 +31,7 @@ func _ready() -> void:
 	http = HTTPRequest.new()
 	add_child(http)
 	http.request_completed.connect(_on_world)
+	print("W2D_READY_DONE")
 	if http.request(WORLD_URL) != OK:
 		_build(_defaults())
 
@@ -107,6 +109,7 @@ func _defaults() -> Dictionary:
 		"env": {"ground": [0.33, 0.52, 0.28]}, "entities": [], "signs": [], "message": "rigfx world"}
 
 func _on_world(_r: int, code: int, _h: PackedStringArray, body: PackedByteArray) -> void:
+	print("W2D_WORLD code=", code, " bytes=", body.size())
 	var data := _defaults()
 	if code == 200:
 		var j = JSON.parse_string(body.get_string_from_utf8())
