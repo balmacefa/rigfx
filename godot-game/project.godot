@@ -1,16 +1,16 @@
 config_version=5
 [application]
-config/name="rigfx world"
-run/main_scene="res://World.tscn"
+config/name="rigfx world 2D"
+run/main_scene="res://World2D.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 [display]
-window/size/viewport_width=960
-window/size/viewport_height=540
+window/size/viewport_width=1152
+window/size/viewport_height=648
 window/stretch/mode="canvas_items"
 [rendering]
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-
+textures/canvas_textures/default_texture_filter=0
 [debug]
 gdscript/warnings/treat_warnings_as_errors=false
 gdscript/warnings/untyped_declaration=0
