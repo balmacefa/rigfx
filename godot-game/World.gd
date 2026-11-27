@@ -23,7 +23,9 @@ var rng := RandomNumberGenerator.new()
 var http: HTTPRequest
 var content_root: Node3D
 var coins: Array = []
+var crystals: Array = []
 var frame_cache := {}
+var time := 0.0
 
 func _ready() -> void:
 	_setup_env_default()
@@ -212,11 +214,15 @@ func _entity(e: Dictionary, size: float) -> void:
 		logs.material_override = _mat(Color(0.3, 0.18, 0.1))
 		content_root.add_child(logs)
 	elif kind == "crystal":
+		var holder := Node3D.new()
+		holder.position = pos
 		var mi := MeshInstance3D.new()
 		var pm := PrismMesh.new(); pm.size = Vector3(1.4, 4.0, 1.4)
-		mi.mesh = pm; mi.position = pos + Vector3(0, 2.0, 0)
+		mi.mesh = pm; mi.position = Vector3(0, 2.0, 0)
 		mi.material_override = _mat(color, true)
-		content_root.add_child(mi)
+		holder.add_child(mi)
+		content_root.add_child(holder)
+		crystals.append(holder)
 	elif kind == "coin":
 		var mi := MeshInstance3D.new()
 		var cm := CylinderMesh.new(); cm.top_radius = 0.5; cm.bottom_radius = 0.5; cm.height = 0.12
@@ -249,6 +255,7 @@ func _build_world(data: Dictionary) -> void:
 	for c in content_root.get_children():
 		c.queue_free()
 	coins.clear()
+	crystals.clear()
 	var env_d: Dictionary = data.get("env", {})
 	var we := get_node_or_null("WE") as WorldEnvironment
 	if we and we.environment:
@@ -335,6 +342,7 @@ func _unhandled_input(e: InputEvent) -> void:
 		yaw_pitch.rotation.x = pitch
 
 func _physics_process(delta: float) -> void:
+	time += delta
 	var input := Vector3.ZERO
 	if Input.is_key_pressed(KEY_W): input.z -= 1.0
 	if Input.is_key_pressed(KEY_S): input.z += 1.0
@@ -362,5 +370,17 @@ func _physics_process(delta: float) -> void:
 		c.rotate_y(delta * 3.0)
 		if ppos.distance_to(c.global_position) < 1.8:
 			c.queue_free(); coins.remove_at(i); score += 1
+	# crystal floating animation
+	for i in range(crystals.size() - 1, -1, -1):
+		var cr = crystals[i]
+		if not is_instance_valid(cr):
+			crystals.remove_at(i); continue
+		var offset := float(i) * 1.3
+		var bob := sin(time * 1.4 + offset) * 0.3
+		var sway := cos(time * 0.8 + offset) * 0.15
+		if cr.get_child_count() > 0:
+			cr.get_child(0).position.y = 2.0 + bob
+			cr.get_child(0).rotation.y = sway
+			cr.get_child(0).rotation.z = sin(time * 0.6 + offset) * 0.1
 	var p := player.global_position
 	hud.text = "WASD move - Shift sprint - Space jump - Mouse look - Esc cursor\npos %d, %d   stamina %d%%   coins %d" % [int(p.x), int(p.z), int(stamina * 100), score]
