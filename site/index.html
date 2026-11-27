@@ -64,11 +64,21 @@ Promise.all([fetch('media/index.json').then(r=>r.json()),fetch('media/chars.json
   $('#moves').onclick=e=>e.target.dataset.m&&show(e.target.dataset.m);
   show(location.hash.slice(1)||'sword-combo')});
 </script><script>
-fetch('https://n8n-public.balmacefa.com/webhook/rigfx-autopilot').then(r=>r.json()).then(d=>{
-  var c=document.getElementById('ap-commits');
-  c.innerHTML=(d.commits||[]).map(function(x){return '<div class="card" style="padding:10px 12px;margin-bottom:8px"><code style="color:var(--acc)">'+x.h+'</code> '+(x.s||'').replace(/</g,'&lt;')+'<br><span style="color:var(--mut);font-size:.76rem">'+(x.d||'')+'</span></div>'}).join('')||'<p style="color:var(--mut)">no data</p>';
-  var dr=((d.drafts||'')+'').trim();
-  document.getElementById('ap-drafts').innerHTML=dr?'<pre style="max-height:440px;white-space:pre-wrap;margin:0">'+dr.replace(/</g,'&lt;')+'</pre>':'<p style="color:var(--mut)">no drafts yet</p>';
+function apParseDrafts(txt){
+  var parts=(txt||'').split(/^=== .*? ===$/m).map(function(s){return s.trim()}).filter(Boolean);
+  return parts.map(function(b){
+    var cmd=(b.match(/CMD:\s*(.*)/)||[])[1]||'';
+    var bio=(b.match(/BIO:\s*([\s\S]*)/)||[])[1]||'';
+    var nm=cmd.match(/new-character\.mjs\s+(\S+)/);
+    var params=cmd.replace(/^.*new-character\.mjs\s+\S+\s*/,'').replace(/\s*--/g,' ').trim();
+    return {name:nm?nm[1]:'character',bio:bio.trim(),params:params};
+  }).filter(function(d){return d.name}).reverse();
+}
+fetch('https://n8n-public.balmacefa.com/webhook/rigfx-autopilot').then(function(r){return r.json()}).then(function(d){
+  var esc=function(s){return (s||'').replace(/</g,'&lt;')};
+  document.getElementById('ap-commits').innerHTML=(d.commits||[]).map(function(x){return '<div class="card" style="padding:10px 12px;margin-bottom:8px"><code style="color:var(--acc)">'+x.h+'</code> '+esc(x.s)+'<br><span style="color:var(--mut);font-size:.76rem">'+esc(x.d)+'</span></div>'}).join('')||'<p style="color:var(--mut)">no data</p>';
+  var dr=apParseDrafts(d.drafts);
+  document.getElementById('ap-drafts').innerHTML=dr.length?dr.map(function(x){return '<div class="card" style="padding:10px 12px;margin-bottom:8px"><b style="text-transform:capitalize;font-size:1rem">'+esc(x.name)+'</b><br><span style="color:var(--mut);font-size:.84rem">'+esc(x.bio)+'</span>'+(x.params?'<br><code style="font-size:.7rem;color:var(--mut);line-height:1.5">'+esc(x.params)+'</code>':'')+'</div>'}).join(''):'<p style="color:var(--mut)">no drafts yet</p>';
 }).catch(function(){document.getElementById('ap-commits').innerHTML='<p style="color:var(--mut)">feed offline</p>';document.getElementById('ap-drafts').innerHTML='';});
 </script>
 </body></html>
