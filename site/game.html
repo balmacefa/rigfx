@@ -11,9 +11,12 @@ header{max-width:900px;margin:0 auto;padding:18px}h1{margin:.2em 0}h1 span{color
 .bar{height:12px;background:#38344d;border-radius:6px;overflow:hidden;margin:6px 0}
 .bar>i{display:block;height:100%;background:var(--hp);transition:width .25s}
 .moves{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:720px;margin:12px auto}
-button{background:var(--card);color:var(--ink);border:1px solid #38344d;border-radius:8px;padding:8px 12px;cursor:pointer;font:inherit;transition:all .15s}
-button:hover{border-color:var(--acc)}button:disabled{opacity:.4;cursor:default}
+button{background:var(--card);color:var(--ink);border:1px solid #38344d;border-radius:8px;padding:8px 12px;cursor:pointer;font:inherit;transition:all .15s;position:relative}
+button:hover{border-color:var(--acc);transform:translateY(-1px)}button:disabled{opacity:.4;cursor:default}
+button kbd{position:absolute;top:2px;right:4px;font-size:10px;color:var(--acc);background:#38344d;padding:1px 4px;border-radius:3px;font-family:monospace}
+button:active,button.pressed{background:var(--acc);color:var(--bg);border-color:var(--acc);transform:scale(.95)}
 #msg{min-height:1.4em;color:var(--mut)}#score{color:var(--acc);font-weight:bold}
+kbd{background:var(--card);border:1px solid #38344d;border-radius:3px;padding:2px 6px;font-size:.9em;font-family:monospace}
 .crit{color:#ff40ff;font-weight:bold;text-shadow:0 0 8px #ff40ff}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 @keyframes flash{0%,100%{filter:brightness(1)}50%{filter:brightness(2.5) saturate(0)}}
@@ -21,7 +24,7 @@ button:hover{border-color:var(--acc)}button:disabled{opacity:.4;cursor:default}
 .flash{animation:flash .3s ease-in-out}
 </style></head><body>
 <header><h1>rigfx <span>arena</span></h1>
-<p>Pick a move to attack. Beat a foe and a new rig steps in. Wins: <span id="score">0</span></p>
+<p>Pick a move to attack (or use keys <kbd>1</kbd>-<kbd>9</kbd>, <kbd>0</kbd>, <kbd>-</kbd>, <kbd>=</kbd>). Beat a foe and a new rig steps in. Wins: <span id="score">0</span></p>
 <p><a href="/">&larr; back to rigfx</a></p></header>
 <div class="arena" id="arena">
   <div class="fighter"><div id="hname">you</div><img id="hero" alt="hero"/><div class="bar"><i id="hhp" style="width:100%"></i></div></div>
@@ -50,6 +53,7 @@ async function attack(m){if(busy)return;busy=true;
   await new Promise(r=>setTimeout(r,650));
   if(hhp<=0){$("msg").textContent=`you fell after ${score} wins. restarting…`;score=0;await new Promise(r=>setTimeout(r,900));newGame();}
   busy=false;}
-$("moves").innerHTML=MOVES.map(m=>`<button onclick="attack('${m}')">${m.replace(/-/g," ")}</button>`).join("");
+$("moves").innerHTML=MOVES.map((m,i)=>{const keys=['1','2','3','4','5','6','7','8','9','0','-','='];return`<button id="btn${i}" onclick="attack('${m}')">${m.replace(/-/g," ")}<kbd>${keys[i]}</kbd></button>`;}).join("");
+document.addEventListener('keydown',e=>{const keys=['1','2','3','4','5','6','7','8','9','0','-','='];const idx=keys.indexOf(e.key);if(idx!==-1&&idx<MOVES.length){const btn=$("btn"+idx);if(!busy&&btn){btn.classList.add('pressed');attack(MOVES[idx]);setTimeout(()=>btn.classList.remove('pressed'),150);}}});
 fetch("media/chars.json").then(r=>r.json()).then(c=>{chars=Object.keys(c);newGame();$("msg").textContent="fight!";}).catch(e=>{$("msg").textContent="could not load roster";});
 </script></body></html>
