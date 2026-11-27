@@ -7,12 +7,17 @@
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,Segoe UI,sans-serif}
 header,main,footer{max-width:1100px;margin:0 auto;padding:24px}
 h1{font-size:2.2rem;margin:.2em 0}h1 span{color:var(--acc)}p.lead{color:var(--mut);max-width:62ch}
-a{color:var(--acc)}nav a{margin-right:16px}
+a{color:var(--acc);text-decoration:none;transition:opacity .2s}a:hover{opacity:.8}a:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radius:3px}
+nav a{margin-right:16px}
 .moves{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
-button{background:var(--card);color:var(--ink);border:1px solid #38344d;border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit}
+button{background:var(--card);color:var(--ink);border:1px solid #38344d;border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit;transition:all .2s ease}
+button:hover{border-color:var(--acc);transform:translateY(-1px)}
+button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 button[aria-pressed=true]{background:var(--acc);color:#1a1206;border-color:var(--acc)}
+button[aria-pressed=true]:hover{transform:translateY(-1px);opacity:.9}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
-.card{background:var(--card);border-radius:12px;padding:12px}
+.card{background:var(--card);border-radius:12px;padding:12px;transition:transform .2s ease,box-shadow .2s ease}
+.card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.4)}
 .card img{width:100%;image-rendering:pixelated;background:#14121c;border-radius:8px;display:block}
 .card h3{margin:.6em 0 .2em;font-size:1rem}.card code{color:var(--mut);font-size:.78rem;line-height:1.4;display:block}
 pre{background:var(--card);padding:14px;border-radius:10px;overflow:auto;font-size:.85rem}
@@ -26,7 +31,7 @@ footer{color:var(--mut);font-size:.9rem}
 <main>
 <figure style="margin:0 0 28px"><video controls playsinline preload="metadata" poster="media/rigfx-demo-poster.jpg" style="width:100%;border-radius:14px;display:block;background:#000">
 <source src="https://balmacefa.github.io/rigfx/media/rigfx-demo.mp4" type="video/mp4">
-Your browser does not support the video tag.</video>
+Your browser does not support the video tag.</video><style>video:focus-visible{outline:2px solid var(--acc);outline-offset:4px}</style>
 <figcaption style="color:var(--mut);font-size:.9rem;margin-top:8px">2-minute tour: 17 characters, 12 moves, one rig. Narration and backgrounds generated on GPU for pennies; every animation rendered on CPU.</figcaption></figure>
 <div class="moves" id="moves" role="group" aria-label="Move"></div>
 <div class="grid" id="grid"></div>
